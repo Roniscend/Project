@@ -79,7 +79,12 @@ export default function MapGraph({
   // display
   height = 520,
   showFilter = false,
+  pathColor = 'purple',   // 'purple' (BFS) | 'amber' (brute force)
 }) {
+  // Derive actual hex colours from pathColor prop
+  const PATH_EDGE_COLOR  = pathColor === 'amber' ? '#f59e0b' : '#a78bfa';
+  const PATH_NODE_COLOR  = pathColor === 'amber' ? '#f59e0b' : '#8b5cf6';
+  const PATH_NODE_FILL   = pathColor === 'amber' ? '#f59e0b' : '#8b5cf6';
   const nodeIds = Object.keys(nodes);
   const [filter, setFilter] = useState('all');
 
@@ -104,7 +109,11 @@ export default function MapGraph({
     if (id === startNode)                             return TYPE_STYLE.start;
     if (id === endNode)                               return TYPE_STYLE.end;
     if (id === faultNode)                             return TYPE_STYLE.fault;
-    if (highlightPath.includes(id))                   return TYPE_STYLE.path;
+    if (highlightPath.includes(id))                   return {
+      ...TYPE_STYLE.path,
+      color: PATH_NODE_COLOR,
+      fill:  PATH_NODE_FILL,
+    };
     if (affectedZones.includes(id) && id !== faultNode) return TYPE_STYLE.affected;
     return TYPE_STYLE[nodes[id]?.type] ?? TYPE_STYLE.substation;
   };
@@ -184,7 +193,7 @@ export default function MapGraph({
             <Polyline key={`e-${i}`}
               positions={[[n1.lat, n1.lng], [n2.lat, n2.lng]]}
               pathOptions={{
-                color: onPath ? '#a78bfa' : onAff ? '#06b6d4' : 'rgba(99,179,237,0.2)',
+                color: onPath ? PATH_EDGE_COLOR : onAff ? '#06b6d4' : 'rgba(99,179,237,0.2)',
                 weight: onPath ? 5 : onAff ? 2.5 : 1.8,
                 opacity: onPath ? 1 : 0.6,
                 dashArray: onAff && !onPath ? '6,5' : undefined,

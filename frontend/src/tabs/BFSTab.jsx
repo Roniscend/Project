@@ -228,36 +228,96 @@ export default function BFSTab({ graphData, isCustom, onClearCustom }) {
           </div>
 
           {result.brute_force && (
-            <div className="card">
-              <div className="card-header">
-                <div className="card-icon amber">⚡</div>
-                <div><div className="card-title">BFS vs Brute Force</div></div>
-              </div>
-              <div className="compare-grid">
-                <div className="results-panel">
-                  <div className="section-title" style={{ color:'var(--blue)' }}>🔵 BFS</div>
-                  <div className="stat-grid">
-                    <div className="stat-box"><div className="stat-value blue">{result.hops}</div><div className="stat-label">Hops</div></div>
-                    <div className="stat-box"><div className="stat-value blue">{result.nodes_explored}</div><div className="stat-label">Visited</div></div>
-                    <div className="stat-box"><div className="stat-value blue">{result.time_ms}ms</div><div className="stat-label">Time</div></div>
+            <>
+              {/* BF vs BFS Stats */}
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-icon amber">⚡</div>
+                  <div>
+                    <div className="card-title">BFS (Optimal) vs Brute Force (Random) — Comparison</div>
+                    <div className="card-desc">BFS always finds the shortest path · Brute Force picks a random valid path</div>
                   </div>
                 </div>
-                <div className="results-panel">
-                  <div className="section-title" style={{ color:'var(--amber)' }}>⚡ Brute Force</div>
-                  <div className="stat-grid">
-                    <div className="stat-box"><div className="stat-value amber">{result.brute_force.hops}</div><div className="stat-label">Hops</div></div>
-                    <div className="stat-box"><div className="stat-value amber">{result.brute_force.paths_explored}</div><div className="stat-label">Paths Tried</div></div>
-                    <div className="stat-box"><div className="stat-value amber">{result.brute_force.time_ms}ms</div><div className="stat-label">Time</div></div>
+                <div className="compare-grid">
+                  <div className="results-panel">
+                    <div className="section-title" style={{ color:'var(--blue)' }}>🔵 BFS — Optimal Path</div>
+                    <div className="stat-grid">
+                      <div className="stat-box"><div className="stat-value blue">{result.hops}</div><div className="stat-label">Hops</div></div>
+                      <div className="stat-box"><div className="stat-value blue">{result.nodes_explored}</div><div className="stat-label">Visited</div></div>
+                      <div className="stat-box"><div className="stat-value blue">{result.time_ms}ms</div><div className="stat-label">Time</div></div>
+                    </div>
+                  </div>
+                  <div className="results-panel">
+                    <div className="section-title" style={{ color:'var(--amber)' }}>⚡ Brute Force — Random Path</div>
+                    <div className="stat-grid">
+                      <div className="stat-box"><div className="stat-value amber">{result.brute_force.hops}</div><div className="stat-label">Hops</div></div>
+                      <div className="stat-box"><div className="stat-value amber">{result.brute_force.paths_explored}</div><div className="stat-label">Paths Tried</div></div>
+                      <div className="stat-box"><div className="stat-value amber">{result.brute_force.time_ms}ms</div><div className="stat-label">Time</div></div>
+                    </div>
                   </div>
                 </div>
+                <div className="alert alert-warn" style={{ marginTop:'1rem' }}>
+                  🎲 Brute Force explored <strong>{result.brute_force.paths_explored}</strong> paths and picked one <strong>at random</strong> ({result.brute_force.hops} hops).{' '}
+                  BFS guaranteed the <strong>shortest path in {result.hops} hops</strong> by exploring only {result.nodes_explored} nodes layer-by-layer.
+                </div>
               </div>
-              <div className="alert alert-warn" style={{ marginTop:'1rem' }}>
-                BFS visited <strong>{result.nodes_explored}</strong> nodes vs Brute Force trying <strong>{result.brute_force.paths_explored}</strong> paths —{' '}
-                <strong>{result.brute_force.paths_explored > result.nodes_explored
-                  ? (result.brute_force.paths_explored / Math.max(result.nodes_explored,1)).toFixed(1)+'x'
-                  : 'equally'}</strong> more efficient.
+
+              {/* Brute Force Random Path Map */}
+              <div className="card" style={{ padding:0, overflow:'hidden' }}>
+                <div className="card-header" style={{ padding:'1rem 1.5rem' }}>
+                  <div className="card-icon amber">🎲</div>
+                  <div>
+                    <div className="card-title">Brute Force — Random Path Visualization</div>
+                    <div className="card-desc">
+                      ⚡ {result.brute_force.hops} hops · Not optimal · Random route selected from {result.brute_force.paths_explored} explored paths
+                    </div>
+                  </div>
+                </div>
+
+                {/* Amber path overlay: re-use MapGraph with bfPath as highlightPath */}
+                <MapGraph
+                  nodes={nodes}
+                  edges={edges}
+                  highlightPath={result.brute_force.path || []}
+                  startNode={result?.depot || effectiveDepot || null}
+                  endNode={result?.fault  || effectiveFault  || null}
+                  faultNode={effectiveFault || null}
+                  height={400}
+                  pathColor="amber"
+                />
+
+                {/* Random path trace */}
+                {result.brute_force.path?.length > 0 && (
+                  <div style={{ padding:'0.75rem 1.5rem', borderTop:'1px solid var(--border)' }}>
+                    <div style={{ fontSize:'0.7rem', color:'#f59e0b', fontWeight:700, marginBottom:6 }}>
+                      🎲 Random Brute Force Path ({result.brute_force.hops} hops):
+                    </div>
+                    <div className="path-trace" style={{ flexWrap:'wrap' }}>
+                      {result.brute_force.path.map((n, i) => (
+                        <span key={`${n}-${i}`} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                          <span style={{
+                            background: n === result.depot ? 'rgba(16,185,129,0.15)' : n === result.fault ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.1)',
+                            border: `1px solid ${n === result.depot ? '#10b981' : n === result.fault ? '#ef4444' : '#f59e0b'}`,
+                            color: n === result.depot ? '#10b981' : n === result.fault ? '#ef4444' : '#f59e0b',
+                            borderRadius:6, padding:'2px 8px', fontSize:'0.72rem', fontWeight:700,
+                          }}>
+                            {n}
+                            <span style={{ fontSize:'0.6rem', marginLeft:3, opacity:0.6 }}>{nodes[n]?.area}</span>
+                          </span>
+                          {i < result.brute_force.path.length - 1 && (
+                            <span style={{ color:'#f59e0b', fontSize:'0.8rem' }}>→</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="alert alert-info" style={{ marginTop:'0.75rem' }}>
+                      <strong>Why random?</strong> Brute Force has no heuristic — it explores all possible routes
+                      and picks one arbitrarily. BFS guarantees the <strong>fewest hops</strong> by exploring layer-by-layer.
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            </>
           )}
         </>
       )}

@@ -51,26 +51,30 @@ export default function App() {
           <div className="logo-icon">⚡</div>
           <span className="logo-text">Packet<span>Path</span></span>
         </div>
+        <span className="header-divider">|</span>
         <span className="header-subtitle">Grid Fault Management · BFS · DFS · Round-Robin</span>
 
         {/* Custom graph badge */}
         {hasCustom && (
           <div style={{
             display:'flex', alignItems:'center', gap:6,
-            background:'rgba(139,92,246,0.15)', border:'1px solid rgba(139,92,246,0.4)',
-            borderRadius:8, padding:'4px 12px', fontSize:'0.75rem',
-            color:'#a78bfa', fontWeight:700,
+            background:'rgba(139,92,246,0.12)', border:'1px solid rgba(139,92,246,0.35)',
+            borderRadius:20, padding:'4px 14px', fontSize:'0.73rem',
+            color:'#a78bfa', fontWeight:700, letterSpacing:'0.02em',
+            boxShadow:'0 0 12px rgba(139,92,246,0.2)',
           }}>
-            🏗️ Custom Graph Active ({Object.keys(customGraph.nodes).length} nodes)
+            🏗️ Custom +{Object.keys(customGraph.nodes).length}
           </div>
         )}
 
-        <div className="header-status" style={{ marginLeft:'auto' }}>
+        <div className="header-status">
           <div className="status-dot" style={{
             background: apiOnline ? 'var(--green)' : 'var(--red)',
-            boxShadow: apiOnline ? '0 0 8px var(--green)' : '0 0 8px var(--red)',
+            boxShadow: apiOnline ? '0 0 10px var(--green)' : '0 0 10px var(--red)',
           }} />
-          {apiOnline ? 'API Online' : 'API Offline'}
+          <span style={{ fontSize:'0.75rem', fontFamily:'var(--font-mono)', color: apiOnline ? 'var(--green)' : 'var(--red)' }}>
+            {apiOnline ? 'API Online' : 'API Offline'}
+          </span>
         </div>
       </header>
 

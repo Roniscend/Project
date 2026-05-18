@@ -205,19 +205,23 @@ def dfs_affected_zones(fault_node: str, blockers: list = None):
 
 
 def brute_force_path(start: str, target: str, max_depth: int = 10, adj: dict = None):
+    """Brute-force explores all paths and returns a RANDOM one (not shortest).
+    This demonstrates that brute force is inefficient and non-optimal."""
+    import random
     adj = adj if adj is not None else ADJ
-    best = {"path": None, "hops": float("inf")}
-    visited = set()
+    all_paths = []
     paths_explored = [0]
+    visited = set()
     def dfs(node, path):
-        if len(path) > max_depth: return
+        if len(path) > max_depth + 1: return
         if node == target:
             paths_explored[0] += 1
-            if len(path) - 1 < best["hops"]:
-                best["path"] = list(path)
-                best["hops"] = len(path) - 1
+            all_paths.append(list(path))
             return
-        for neighbor, _ in adj.get(node, []):
+        # Randomize neighbor order so each call explores differently
+        neighbors = list(adj.get(node, []))
+        random.shuffle(neighbors)
+        for neighbor, _ in neighbors:
             if neighbor not in visited:
                 visited.add(neighbor)
                 path.append(neighbor)
@@ -226,7 +230,12 @@ def brute_force_path(start: str, target: str, max_depth: int = 10, adj: dict = N
                 visited.remove(neighbor)
     visited.add(start)
     dfs(start, [start])
-    return best["path"] or [], best["hops"], paths_explored[0]
+    if not all_paths:
+        return [], -1, paths_explored[0]
+    # Pick a RANDOM path (intentionally not the shortest) to show brute force is non-optimal
+    random.shuffle(all_paths)
+    chosen = all_paths[0]
+    return chosen, len(chosen) - 1, paths_explored[0]
 
 
 def nearest_depot(fault_node: str):
@@ -244,32 +253,72 @@ def nearest_depot(fault_node: str):
 # ─────────────────────────────────────────────────────────────
 
 def run_round_robin(faults: list, time_quantum: int):
-    queue = sorted(faults, key=lambda f: (0 if f.get("critical") else 1, f["arrival"]))
-    current_time, remaining = 0, {f["id"]: f["burst"] for f in faults}
-    fault_map = {f["id"]: f for f in faults}
-    gantt, waiting, completion = [], {f["id"]: 0 for f in faults}, {}
-    pending = sorted(queue, key=lambda f: f["arrival"])
-    pending_idx, arrived_set = 0, set()
-    rr_queue = deque()
+    """Priority Round-Robin: very_critical > critical > standard.
+    Higher-priority faults are always inserted ahead of lower-priority ones."""
 
+    def priority_key(f):
+        p = f.get("priority", "standard")
+        if p == "very_critical": return 0
+        if p == "critical" or f.get("critical"): return 1
+        return 2
+
+    fault_map  = {f["id"]: f for f in faults}
+    remaining  = {f["id"]: f["burst"] for f in faults}
+    pending    = sorted(faults, key=lambda f: f["arrival"])
+    pending_idx, arrived_set = 0, set()
+    rr_queue   = deque()
+    gantt, completion = [], {}
+    current_time = 0
+
+    def insert_by_priority(q, fid):
+        """Insert fid into deque before the first item of strictly lower priority."""
+        pk = priority_key(fault_map[fid])
+        tmp = list(q)
+        pos = len(tmp)
+        for i, qid in enumerate(tmp):
+            if priority_key(fault_map[qid]) > pk:
+                pos = i
+                break
+        tmp.insert(pos, fid)
+        return deque(tmp)
+
+    # Seed queue with faults that arrive at t=0
     while pending_idx < len(pending) and pending[pending_idx]["arrival"] <= current_time:
-        rr_queue.append(pending[pending_idx]["id"]); arrived_set.add(pending[pending_idx]["id"]); pending_idx += 1
+        fid = pending[pending_idx]["id"]
+        arrived_set.add(fid)
+        rr_queue = insert_by_priority(rr_queue, fid)
+        pending_idx += 1
 
     iterations = 0
     while rr_queue and iterations < 500:
         iterations += 1
         fid = rr_queue.popleft()
-        f = fault_map[fid]
-        exec_time = min(time_quantum, remaining[fid])
-        start = current_time; current_time += exec_time; remaining[fid] -= exec_time
-        gantt.append({"fault_id": fid, "fault_label": f["node"], "crew": f.get("crew","Crew"), "start": start, "end": current_time, "critical": f.get("critical", False)})
+        f   = fault_map[fid]
+        exec_time    = min(time_quantum, remaining[fid])
+        start        = current_time
+        current_time += exec_time
+        remaining[fid] -= exec_time
+        gantt.append({
+            "fault_id":    fid,
+            "fault_label": f["node"],
+            "crew":        f.get("crew", "Crew"),
+            "start":       start,
+            "end":         current_time,
+            "critical":    f.get("critical", False),
+            "priority":    f.get("priority", "standard"),
+        })
+
+        # Enqueue any faults that arrived during this slice
         while pending_idx < len(pending) and pending[pending_idx]["arrival"] <= current_time:
             pid = pending[pending_idx]["id"]
             if pid not in arrived_set:
-                rr_queue.append(pid); arrived_set.add(pid)
+                arrived_set.add(pid)
+                rr_queue = insert_by_priority(rr_queue, pid)
             pending_idx += 1
+
+        # Re-queue current fault if not finished, respecting priority
         if remaining[fid] > 0:
-            rr_queue.append(fid)
+            rr_queue = insert_by_priority(rr_queue, fid)
         else:
             completion[fid] = current_time
 
@@ -277,9 +326,18 @@ def run_round_robin(faults: list, time_quantum: int):
     for f in faults:
         fid = f["id"]
         tat = completion.get(fid, current_time) - f["arrival"]
-        results.append({"fault_id": fid, "node": f["node"], "crew": f.get("crew","Crew"), "burst": f["burst"],
-                        "arrival": f["arrival"], "completion": completion.get(fid, current_time),
-                        "turnaround": tat, "waiting": max(0, tat - f["burst"]), "critical": f.get("critical", False)})
+        results.append({
+            "fault_id":   fid,
+            "node":       f["node"],
+            "crew":       f.get("crew", "Crew"),
+            "burst":      f["burst"],
+            "arrival":    f["arrival"],
+            "completion": completion.get(fid, current_time),
+            "turnaround": tat,
+            "waiting":    max(0, tat - f["burst"]),
+            "critical":   f.get("critical", False),
+            "priority":   f.get("priority", "standard"),
+        })
     return gantt, results
 
 
@@ -306,7 +364,13 @@ class DFSRequest(BaseModel):
     custom_edges: Optional[list] = None
 
 class FaultItem(BaseModel):
-    id: str; node: str; burst: int; arrival: int = 0; crew: str = "Crew-A"; critical: bool = False
+    id: str
+    node: str
+    burst: int
+    arrival: int = 0
+    crew: str = "Crew-A"
+    critical: bool = False
+    priority: str = "standard"   # "standard" | "critical" | "very_critical"
 
 class SchedulerRequest(BaseModel):
     faults: list[FaultItem]
@@ -438,7 +502,11 @@ def run_dfs(req: DFSRequest):
 def run_schedule(req: SchedulerRequest):
     faults = [f.model_dump() for f in req.faults]
     for f in faults:
-        f["critical"] = NODES.get(f["node"], {}).get("critical", False)
+        # Derive critical flag from priority field first, then fallback to node lookup
+        if f.get("priority") in ("critical", "very_critical"):
+            f["critical"] = True
+        elif not f.get("critical"):
+            f["critical"] = NODES.get(f["node"], {}).get("critical", False)
     gantt, results = run_round_robin(faults, req.time_quantum)
     avg_wait = sum(r["waiting"] for r in results) / len(results) if results else 0
     avg_tat  = sum(r["turnaround"] for r in results) / len(results) if results else 0
