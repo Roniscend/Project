@@ -17,10 +17,12 @@ async function get(path) {
 }
 
 export const api = {
-  getGraph:   () => get('/graph'),
-  getNodes:   () => get('/nodes'),
-  runBFS:     (body) => post('/bfs', body),
-  runDFS:     (body) => post('/dfs', body),
-  runSchedule:(body) => post('/schedule', body),
-  runDemo:    (body) => post('/demo', body),
+  getGraph:    () => get('/graph'),
+  getNodes:    () => get('/nodes'),
+  // depot (optional, null = auto-nearest) + fault = target substation
+  runBFS:      (body) => post('/bfs', body),
+  runDFS:      (body) => post('/dfs', body),
+  runSchedule: (body) => post('/schedule', body),
+  runDemo:     (body) => post('/demo', body),
 };
+
