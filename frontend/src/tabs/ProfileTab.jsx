@@ -1,5 +1,5 @@
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-
 const ALGO_COLORS = {
   bfs:       { bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.35)',  text: '#60a5fa',  label: 'BFS',       icon: '🔵' },
   dfs:       { bg: 'rgba(6,182,212,0.1)',    border: 'rgba(6,182,212,0.3)',    text: '#22d3ee',  label: 'DFS',       icon: '🌊' },

@@ -205,37 +205,58 @@ def dfs_affected_zones(fault_node: str, blockers: list = None):
 
 
 def brute_force_path(start: str, target: str, max_depth: int = 10, adj: dict = None):
-    """Brute-force explores all paths and returns a RANDOM one (not shortest).
-    This demonstrates that brute force is inefficient and non-optimal."""
+    """Brute-force explores paths inefficiently and returns a NON-OPTIMAL one.
+    This demonstrates that brute force is inefficient compared to BFS."""
     import random
+    import heapq
     adj = adj if adj is not None else ADJ
-    all_paths = []
-    paths_explored = [0]
+    
+    # We use a randomized priority queue (Dijkstra with random noise) 
+    # to guarantee we find *a* path without getting stuck in infinite recursion,
+    # while intentionally returning a non-optimal (longer) path.
+    q = [(0, start, [start])]
     visited = set()
-    def dfs(node, path):
-        if len(path) > max_depth + 1: return
-        if node == target:
-            paths_explored[0] += 1
-            all_paths.append(list(path))
-            return
-        # Randomize neighbor order so each call explores differently
-        neighbors = list(adj.get(node, []))
-        random.shuffle(neighbors)
-        for neighbor, _ in neighbors:
-            if neighbor not in visited:
-                visited.add(neighbor)
-                path.append(neighbor)
-                dfs(neighbor, path)
-                path.pop()
-                visited.remove(neighbor)
-    visited.add(start)
-    dfs(start, [start])
-    if not all_paths:
-        return [], -1, paths_explored[0]
-    # Pick a RANDOM path (intentionally not the shortest) to show brute force is non-optimal
-    random.shuffle(all_paths)
-    chosen = all_paths[0]
-    return chosen, len(chosen) - 1, paths_explored[0]
+    iterations = 0
+    
+    while q:
+        iterations += 1
+        # Fallback to avoid complete freeze on extreme edge cases
+        if iterations > 50000:
+            break
+            
+        cost, curr, path = heapq.heappop(q)
+        
+        if curr == target:
+            # We found a path! It's guaranteed to be valid, but likely not optimal
+            # because the random cost inflated the path.
+            return path, len(path) - 1, iterations
+            
+        if curr in visited:
+            continue
+        visited.add(curr)
+        
+        neighbors = list(adj.get(curr, []))
+        random.shuffle(neighbors) # Add more randomness
+        for nxt, _ in neighbors:
+            if nxt not in visited:
+                # Add random noise to cost (1 to 100) to force sub-optimal paths
+                heapq.heappush(q, (cost + random.randint(1, 100), nxt, path + [nxt]))
+                
+    # If all paths fail, gracefully fallback to BFS to prevent breaking the UI
+    from collections import deque
+    q_fallback = deque([[start]])
+    v_fallback = {start}
+    while q_fallback:
+        iterations += 1
+        p = q_fallback.popleft()
+        c = p[-1]
+        if c == target: return p, len(p) - 1, iterations
+        for nx, _ in adj.get(c, []):
+            if nx not in v_fallback:
+                v_fallback.add(nx)
+                q_fallback.append(p + [nx])
+                
+    return [], -1, iterations
 
 
 def nearest_depot(fault_node: str):

@@ -4,7 +4,10 @@ const STORAGE_KEY = 'packetpath_history';
 const MAX_ENTRIES = 100;
 
 function load() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  try { 
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); 
+    return Array.isArray(parsed) ? parsed : [];
+  }
   catch { return []; }
 }
 

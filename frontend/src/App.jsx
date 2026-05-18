@@ -115,6 +115,12 @@ function AppShell() {
             <span style={{ color:'#475569', fontSize:'0.65rem' }}>{showUserMenu ? '▴' : '▾'}</span>
           </button>
 
+          {/* Close menu on outside click */}
+          {showUserMenu && (
+            <div style={{ position:'fixed', inset:0, zIndex:98 }}
+              onClick={(e) => { e.stopPropagation(); setShowUserMenu(false); }} />
+          )}
+
           {/* Dropdown */}
           {showUserMenu && (
             <div style={{
@@ -203,11 +209,7 @@ function AppShell() {
         </div>
       </header>
 
-      {/* Close menu on outside click */}
-      {showUserMenu && (
-        <div style={{ position:'fixed', inset:0, zIndex:99998 }}
-          onClick={() => setShowUserMenu(false)} />
-      )}
+      {/* Removed old overlay from here, moved to the dropdown container */}
 
       <nav className="nav-tabs">
         {TABS.map(t => (
