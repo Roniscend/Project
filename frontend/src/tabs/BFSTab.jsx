@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import MapGraph from '../components/MapGraph.jsx';
 
-export default function BFSTab({ graphData, isCustom, onClearCustom }) {
+export default function BFSTab({ graphData, isCustom, onClearCustom, onAddHistory }) {
   // graphData = merged (Bangalore + custom) — used for MAP display & dropdowns
   // customGraph = user's custom-only subgraph — sent to backend when isCustom
   const { nodes, edges } = graphData;
@@ -40,6 +40,21 @@ export default function BFSTab({ graphData, isCustom, onClearCustom }) {
       if (res.error) { setError(res.error); return; }
       setResult(res);
       setSelectMode(null);
+      // Save to history
+      onAddHistory?.('bfs', {
+        depot:        res.depot,
+        fault:        res.fault,
+        depot_label:  res.depot_label,
+        fault_label:  res.fault_label,
+        path:         res.path,
+        hops:         res.hops,
+        nodes_explored: res.nodes_explored,
+        total_km:     res.total_km,
+        time_ms:      res.time_ms,
+        used_brute_force: useBF,
+        bf_hops:      res.brute_force?.hops ?? null,
+        bf_paths:     res.brute_force?.paths_explored ?? null,
+      });
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };

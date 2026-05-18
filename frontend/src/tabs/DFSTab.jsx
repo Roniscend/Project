@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import MapGraph from '../components/MapGraph.jsx';
 
-export default function DFSTab({ graphData, isCustom, onClearCustom }) {
+export default function DFSTab({ graphData, isCustom, onClearCustom, onAddHistory }) {
   // graphData = merged (Bangalore + custom) — used for MAP display & dropdowns
   // customGraph = user's custom-only subgraph — sent to backend when isCustom
   const { nodes, edges } = graphData;
@@ -34,6 +34,14 @@ export default function DFSTab({ graphData, isCustom, onClearCustom }) {
       if (res.error) { setError(res.error); return; }
       setResult(res);
       setPickMode(false);
+      // Save to history
+      onAddHistory?.('dfs', {
+        fault:         res.fault,
+        affected_zones: res.affected_zones,
+        zone_count:    res.zone_count,
+        time_ms:       res.time_ms,
+        blockers:      [],
+      });
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };

@@ -14,7 +14,7 @@ const DEFAULT_FAULTS = [
   { id:'F3', node:'S22', burst:10, arrival:2, crew:'Crew-Charlie', priority:'standard'     },
 ];
 
-export default function SchedulerTab({ graphData }) {
+export default function SchedulerTab({ graphData, onAddHistory }) {
   const { nodes } = graphData;
   const nodeIds = Object.keys(nodes).filter(id => nodes[id]?.type !== 'depot');
 
@@ -53,6 +53,14 @@ export default function SchedulerTab({ graphData }) {
         time_quantum: Number(quantum),
       });
       setResult(res);
+      // Save to history
+      onAddHistory?.('scheduler', {
+        time_quantum:        res.time_quantum,
+        fault_count:         res.results?.length ?? 0,
+        avg_waiting_time:    res.avg_waiting_time,
+        avg_turnaround_time: res.avg_turnaround_time,
+        results:             res.results,
+      });
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };
